@@ -1,0 +1,14 @@
+{
+  "name": "vee-labs-docs",
+  "version": "1.0.0",
+  "description": "Vee Labs Documentation Site",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "dependencies": {
+    "vitepress": "^1.0.0",
+    "vue": "^3.3.0"
+  }
+}
