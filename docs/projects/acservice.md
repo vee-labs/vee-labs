@@ -1,93 +1,106 @@
+---
+description: Field service ticketing system for AC technicians — native Android.
+updated: 2026-05-17
+---
+
 # ACServiceApp
 
 > Field service ticketing system for AC technicians — native Android.
 
-ACServiceApp is a mobile app for managing air-conditioning service jobs. Technicians can create tickets, update status, add comments, and close jobs. All data syncs in real time via Firebase Firestore.
+ACServiceApp manages air-conditioning service jobs end-to-end. Admins create and assign tickets; technicians update status and log spare parts; office staff and admin track finances. All data syncs in real time via Firebase Firestore.
 
-## Features
+## What It Does
 
-- **Ticket management** — create, view, update, and close service tickets
-- **Real-time sync** — Firestore keeps all devices up to date instantly
-- **Authentication** — Firebase Email/Password auth with session management
-- **Comments** — technicians and admins can thread comments on each ticket
-- **Role-aware UI** — different views for technicians vs. admin users
+- **Ticket lifecycle** — NEW → ASSIGNED → IN_PROGRESS → COMPLETED, with soft-delete (30-day recycle bin + auto-purge)
+- **Role-based access** — Admin, Office Staff, Technician — each role sees a different UI and has different Firestore permissions
+- **Spare parts & payments** — technicians log spare parts and advance payments per ticket; amounts accumulate (never overwrite)
+- **Finance screen** — monthly summary (calls, revenue, spare, petrol, labour) with per-tech breakdown and CSV export
+- **Activity log** — full audit trail of status changes and actions
+- **Real-time sync** — Firestore live listeners; admin ticket list refreshes on every server push
 
-## Tech Stack
+## Stack
 
 | Layer | Technology |
-|---|---|
+| --- | --- |
 | Language | Kotlin |
-| Platform | Android (native) |
-| Architecture | MVVM (ViewModel + Repository) |
-| Database | Firebase Firestore |
-| Auth | Firebase Authentication |
-| Navigation | Jetpack Navigation Component |
-| Build | Gradle (Kotlin DSL) |
+| Platform | Android (native, minSdk 26) |
+| Architecture | MVVM — ViewModel + Repository |
+| Database | Firebase Firestore (real-time listeners) |
+| Auth | Firebase Authentication (username/password, no email) |
+| Local DB | Room (ActivityLog, LocalUser, TicketStatus) |
+| Cache | AppCache — spare parts pre-loaded at login |
+| Build | Gradle Kotlin DSL, AGP 8.7, Kotlin 2.1, Gradle 8.11.1 |
 
 ## Architecture
 
-```
+```text
 app/src/main/java/com/acservice/app/
+├── App.kt                        # Seed + cache prime on startup (admin only)
 ├── MainActivity.kt
 ├── data/
-│   ├── model/
-│   │   ├── Ticket.kt
-│   │   ├── Comment.kt
-│   │   └── User.kt
-│   └── repository/
-│       ├── AuthRepository.kt
-│       └── TicketRepository.kt
-├── ui/
-│   ├── auth/
-│   │   ├── LoginActivity.kt
-│   │   └── LoginViewModel.kt
-│   └── tickets/
-│       ├── TicketListFragment.kt
-│       ├── TicketDetailFragment.kt
-│       ├── CreateTicketFragment.kt
-│       └── (ViewModels)
-└── utils/
-    ├── SessionManager.kt
-    └── Extensions.kt
+│   ├── auth/FirebaseAuthBridge.kt
+│   ├── cache/AppCache.kt         # In-memory spare parts cache
+│   ├── firestore/                # Ticket, Spare, Comment, Rating, History repos
+│   ├── local/                    # Room: ActivityLog, LocalUser
+│   ├── model/Models.kt
+│   └── remote/UserRepository.kt
+└── ui/
+    ├── admin/                    # AdminDashboard, ActivityLog, TicketList (admin)
+    ├── auth/                     # Login
+    ├── finance/                  # FinanceActivity — monthly summary + CSV
+    ├── technician/               # TechnicianDetail monthly table
+    └── tickets/                  # TicketList, TicketDetail, CreateTicket, ModifyTicket
 ```
 
 ## Firestore Data Model
 
-```
+```text
+/users/{uid}
+  - username (lowercase), role, displayName
+
 /tickets/{ticketId}
-  - title, description, status
-  - assignedTo, createdBy
-  - createdAt, updatedAt
+  - status, technicianUsername, createdBy
+  - labourCharge, advanceAmount, advanceHistory[], paymentHistory[]
+  - pendingSpares[], isDeleted, deletedAt, purgeAfter
+  - lastServerUpdateAt
 
 /tickets/{ticketId}/comments/{commentId}
-  - text, authorId, createdAt
+  - text, authorUsername, createdAt
 
-/users/{uid}
-  - name, email, role
+/spareParts/{id}
+  - name, price, stock
 ```
 
-## Security Rules
+## Key Files
 
-Firestore rules enforce:
-- Authenticated users only
-- Users can only write their own profile
-- Tickets readable by all authenticated users
-- Comments writable only by the author
+| File | Purpose |
+| --- | --- |
+| `TicketRepository.kt` | All Firestore ticket queries, live listeners, soft-delete, CSV export |
+| `TicketListViewModel.kt` | Role-filtered queries, real-time update tracking |
+| `ModifyTicketActivity.kt` | Ticket edit — role-gated fields, spare/advance accumulation |
+| `FinanceActivity.kt` | Monthly finance summary with per-tech breakdown |
+| `firestore.rules` | Deployed rules — role checks, recycle-bin admin-only, index guards |
+
+## Recent Changes
+
+- **v21** — Remove Last Call Received from tech status; cumulative spare pending (append not overwrite); real-time admin list fix (fire only on new `lastServerUpdateAt`)
+- **v20** — Archive → Delete (recycle bin, 30-day purge); remove Resolved status; auth race condition fix; email fields removed from UI; lowercase username migration
+- **Security hardening** — Firestore rules tightened; admin guard before deleted-ticket queries; `commit()` over `apply()` for migration prefs
+- **v17b** — One-time migration to lowercase all `username` and `technicianUsername` fields in Firestore
+- **v14** — Finance screen (Admin + Office Staff); `petrolAmount` field added; incentive removed
 
 ## Setup
 
 ```bash
-# 1. Create Firebase project at console.firebase.google.com
-# 2. Enable Email/Password Authentication
-# 3. Create Firestore database (production mode)
-# 4. Download google-services.json → app/
-
-# Build and run
+# 1. Create Firebase project — enable Auth (username/password) + Firestore
+# 2. Deploy Firestore rules: firebase deploy --only firestore:rules
+# 3. Add app/google-services.json from Firebase Console
+# 4. Build
 ./gradlew assembleDebug
 ```
 
 ## Status
 
-Active development. Internal use / private beta.
+Active development. Internal use — AC service business operations.
 
 → [Back to Projects](/projects/)
