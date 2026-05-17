@@ -21,11 +21,14 @@ API_BASE = f"https://public-api.wordpress.com/rest/v1.1/sites/{SITE}"
 
 # Files to sync: (source markdown path, WordPress page slug, page title, menu order)
 PAGES = [
-    ("docs/index.md",              "home",           "Home",            1),
-    ("docs/guide/index.md",        "getting-started","Getting Started", 2),
-    ("docs/guide/api.md",          "api-reference",  "API Reference",   3),
-    ("docs/guide/examples.md",     "examples",       "Examples",        4),
-    ("docs/guide/contributing.md", "contributing",   "Contributing",    5),
+    ("docs/index.md",                  "home",           "Home",            1),
+    ("docs/projects/index.md",         "projects",       "Projects",        2),
+    ("docs/projects/breachguard.md",   "breachguard",    "BreachGuard",     3),
+    ("docs/projects/acservice.md",     "acserviceapp",   "ACServiceApp",    4),
+    ("docs/guide/index.md",            "getting-started","Getting Started", 5),
+    ("docs/guide/api.md",              "api-reference",  "API Reference",   6),
+    ("docs/guide/examples.md",         "examples",       "Examples",        7),
+    ("docs/guide/contributing.md",     "contributing",   "Contributing",    8),
 ]
 
 MARKDOWN_EXT = ["extra", "codehilite", "fenced_code", "tables", "toc"]
